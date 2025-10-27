@@ -18,6 +18,8 @@ const db = getFirestore();
 
 export interface PairingStartRequest {
   publicKey: string;
+  playerId: string;
+  name?: string;
   deviceInfo?: {
     platform?: string;
     userAgent?: string;
@@ -66,12 +68,16 @@ export default async function handler(
     const pairingCode = Math.floor(1000 + Math.random() * 9000).toString();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
+    const playerId = myRequest.playerId || '';
+    const name = myRequest.name || '';
     const publicKey = myRequest.publicKey || '';
     const deviceInfo = myRequest.deviceInfo || {};
     // Store pending pairing in Firestore
-    await db.collection('devicePairings').doc(pairingCode).set({
+    await db.collection('devicePairings').doc(playerId).set({
       pairingCode,
       publicKey,
+      playerId,
+      name,
       deviceInfo: deviceInfo || {},
       createdAt: now,
       expiresAt,
