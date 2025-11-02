@@ -1,72 +1,78 @@
-import { Stack, Flex, Heading, FormControl, FormLabel, Checkbox, Button, Input,Text,Image} from "@chakra-ui/react"
-import * as React from 'react'
-import type {
-    GetServerSidePropsContext,
-    InferGetServerSidePropsType,
-  } from "next"
-  import { getCsrfToken, signIn } from "next-auth/react"
-  
-  export default function SignIn({
-    csrfToken
-  }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+// pages/auth/signin.tsx
+import { signIn } from 'next-auth/react'
+import { useState } from 'react'
+import { Box, Button, Input, Text, VStack, Heading } from '@chakra-ui/react'
+
+export default function SignIn() {
+  const [email, setEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
     
-    
-    const [email, setemail] = React.useState('');
-
-   // const handleEmailChange = (event: { target: { value: React.SetStateAction<string> } }) => setemail(event.target.value)
-
-    const handleSubmit = (e: { preventDefault: () => void; }) => {
-      e.preventDefault();
-      // "username-login" matches the id for the credential
-      console.log('email is: ',email);
-    
-      signIn("kamioza_login", {email, callbackUrl: '/' });
-    };
-
-
-
-
-    return (
-      <Stack minH={'100vh'} direction={{ base: 'column', md: 'row' }}>
+    try {
+      const result = await signIn('email', {
+        email,
+        redirect: false,
+        callbackUrl: '/store'
+      })
       
-      <Flex p={8} flex={1} align={'center'} justify={'center'}>
-        <Stack spacing={4} w={'full'} maxW={'md'}>
-        
-        <Heading fontSize={'2xl'}>Sign in to your account</Heading>
-        
-        <form onSubmit={handleSubmit}>
-          <Input name="csrfToken" type="hidden" defaultValue={csrfToken} /> 
-          <FormControl id="email" isRequired>
-              <FormLabel>Email address</FormLabel>
-              <Input name="email" value={email} type="email" onChange={(e) => setemail(e.target.value)}/>
-          </FormControl>
-
-          <Button marginY={6} colorScheme={'blue'} variant={'solid'} type="submit">Sign in</Button>
-        </form>
-
-        </Stack>
-
-      </Flex>
-      <Flex flex={1}>
-        <Image
-          alt={'Login Image'}
-          objectFit={'cover'}
-          src={
-            'https://azariaimages.s3.amazonaws.com/MEFLINS.png'
-          }
-        />
-      </Flex>
-    </Stack>
-    )
-  }
-  
-  export async function getServerSideProps(context: GetServerSidePropsContext) {
-    return {
-      props: {
-        csrfToken: await getCsrfToken(context),
-      },
+      if (result?.ok) {
+        setSubmitted(true)
+      }
+    } catch (error) {
+      console.error('Sign in error:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  //        <form method="post" action="/api/auth/callback/kamioza_login">
-  //  <form onSubmit={handleSubmit}>
+  if (submitted) {
+    return (
+      <Box maxW="md" mx="auto" mt={8} p={6}>
+        <VStack spacing={4}>
+          <Heading size="lg">Check your email</Heading>
+          <Text>
+            We've sent a magic link to <strong>{email}</strong>
+          </Text>
+          <Text color="gray.600" fontSize="sm">
+            Click the link in the email to sign in. The link will expire in 24 hours.
+          </Text>
+        </VStack>
+      </Box>
+    )
+  }
+
+  return (
+    <Box maxW="md" mx="auto" mt={8} p={6}>
+      <VStack spacing={6} as="form" onSubmit={handleSubmit}>
+        <Heading>Sign in to Kamioza</Heading>
+        
+        <Input
+          type="email"
+          placeholder="your.email@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          size="lg"
+        />
+        
+        <Button
+          type="submit"
+          colorScheme="blue"
+          size="lg"
+          width="full"
+          isLoading={isLoading}
+        >
+          Send Magic Link
+        </Button>
+        
+        <Text fontSize="sm" color="gray.600">
+          No password needed - we'll email you a secure login link
+        </Text>
+      </VStack>
+    </Box>
+  )
+}

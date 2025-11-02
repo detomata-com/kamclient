@@ -1,9 +1,13 @@
-import NextAuth from "next-auth"
-import type { Account, NextAuthOptions, Profile, User } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
 
-export interface returneduser
-{
+// NextAuth.js API route support: https://nextjs.org/docs/api-routes/introduction
+// pages/api/auth/[...nextauth].ts
+import NextAuth from "next-auth"
+import type { NextAuthOptions } from "next-auth"
+import EmailProvider from "next-auth/providers/email"
+import { FirestoreAdapter } from "@next-auth/firebase-adapter"
+import { cert } from "firebase-admin/app"
+
+export interface returneduser {
   credits: number | null,
   stripeid: string | null,
   ts_added: number | null,
@@ -16,9 +20,8 @@ export interface returneduser
   image: string | null,
   isAuthenticated: boolean
 }
-export interface Session
 
-{
+export interface Session {
   playername: string | null,
   id: string,
   stripeid: string | null,
@@ -28,133 +31,181 @@ export interface Session
   image: string | null,
   isAuthenticated: boolean,
   credits: number | null
-
 }
 
+const firestoreAdapter = FirestoreAdapter({
+  credential: cert({
+    projectId: process.env.FB_PROJECTID,
+    clientEmail: process.env.FB_CLIENT_EMAIL,
+    privateKey: process.env.FB_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  })
+})
+
 export const authOptions: NextAuthOptions = {
-
-  // Configure one or more authentication providers
+  adapter: firestoreAdapter, 
   providers: [
-    CredentialsProvider({
-      // The name to display on the sign in form (e.g. 'Sign in with...')
-      name: 'kamioza_network',
-      id: 'kamioza_login',
-      // The credentials is used to generate a suitable form on the sign in page.
-      // You can specify whatever fields you are expecting to be submitted.
-      // e.g. domain, username, password, 2FA token, etc.
-      // You can pass any HTML attribute to the <input> tag through the object.
-      credentials: {
-        email: { label: "email", type: "email" }
-      },
-      async authorize(credentials, req) {
-      
-        // You need to provide your own logic here that takes the credentials
-        // submitted and returns either a object representing a user or value
-        // that is false/null if the credentials are invalid.
-        // e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
-        // You can also use the `req` object to obtain additional parameters
-        // (i.e., the request IP address)
-       
-        if(credentials){
-        console.log('Passed Credentials: ',credentials)
+    EmailProvider({
+      from: process.env.EMAIL_FROM || 'noreply@kamioza.com',
+      sendVerificationRequest: async ({ identifier: email, url, provider }) => {
+    
+        const { Resend } = await import('resend')
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        
         try {
-          console.log('trying to authorize here...')
-          const response = await fetch(process.env.NEXTAUTH_URL +  '/api/player?'+ new URLSearchParams({email: credentials.email}));
-            //MUST await the json 
-            const user = await response.json();
-          
-            if (response.ok && user){
-             user.name = user.playername;
-             user.image = null;
-             user.isAuthenticated = true;
-             
-            //cant poupulate session so - so cant add to redux !!! Right here
-
-
-            return user
-
-             
-            }else{
-              console.error('failure to call fetch for player info to authenticate', response)
-              return null
-            } 
-           
-      } catch (error) {
-          console.log('error happened Logging in player!....',error)
-          return null
-      }
-       }
-     
-       
+          await resend.emails.send({
+            from: provider.from,
+            to: email,
+            subject: 'Sign in to Kamioza',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Welcome to Kamioza!</h2>
+                <p>Click the button below to sign in to your account:</p>
+                <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">
+                  Sign In
+                </a>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="color: #666; word-break: break-all;">${url}</p>
+                <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                  This link will expire in 24 hours. If you didn't request this email, you can safely ignore it.
+                </p>
+              </div>
+            `
+          })
+          console.log('Magic link sent to:', email)
+        } catch (error) {
+          console.error('Failed to send magic link:', error)
+          throw error
+        }
       }
     })
-    // ...add more providers here
   ],
-  session: {
-    // Use JSON Web Tokens for session instead of database sessions.
-    // This option can be used with or without a database for users/accounts.
-    // Note: `jwt` is automatically set to `true` if no database is specified.
-
-    // Seconds - How long until an idle session expires and is no longer valid.
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   
-    // Seconds - Throttle how frequently to write to database to extend a session.
-    // Use it to limit write operations. Set to 0 to always update the database.
-    // Note: This option is ignored if using JSON Web Tokens
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // 24 hours
   },
+  
   pages: {
     signIn: '/auth/signin',
     signOut: '/auth/signout',
-    error: '/auth/error', // Error code passed in query string as ?error=
-   // verifyRequest: '/auth/verify-request' // (used for check email message)
-   // newUser: null // If set, new users will be directed here on first sign in
+    error: '/auth/error',
+    verifyRequest: '/auth/verify-request',
   },
+  
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false,
+  debug: process.env.NODE_ENV === 'development',
+  
   jwt: {
-      secret: process.env.NEXTAUTH_SECRET
+    secret: process.env.NEXTAUTH_SECRET
   },
+  
   callbacks: {
-    async signIn(user: any) {//, account: Account| null, profile: Profile | undefined
-      console.log('user validated - > ',user);
-     // PlayerActivate(user);
-      return true
+    async signIn({ user, account, profile }) {
+      console.log('Sign in attempt for:', user.email)
+      
+      if (!user.email) {
+        console.error('No email provided')
+        return false
+      }
+      
+      try {
+        // Check if player exists in your database
+        const response = await fetch(
+          `${process.env.NEXTAUTH_URL}/api/player?email=${encodeURIComponent(user.email)}`
+        )
+        
+        if (response.ok) {
+          const existingPlayer = await response.json()
+          console.log('Existing player found:', existingPlayer.playername)
+          
+          // Update emailValidated since they clicked the magic link
+          await fetch(`${process.env.NEXTAUTH_URL}/api/player`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...existingPlayer,
+              emailValidated: true
+            })
+          })
+        } else {
+          // Create new player record using your existing API
+          console.log('Creating new player:', user.email)
+          const createResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/player`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user.email,
+              playername: user.email.split('@')[0] || 'Player',
+              emailValidated: true,
+              credits: 0,
+              stripeid: null,
+              trustedDevices: []
+            })
+          })
+          
+          if (!createResponse.ok) {
+            console.error('Failed to create player')
+            return false
+          }
+        }
+        
+        return true
+      } catch (error) {
+        console.error('Error in signIn callback:', error)
+        return false
+      }
     },
+    
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
       else if (new URL(url).origin === baseUrl) return url
       return baseUrl
     },
-    async jwt({ user,token,trigger,session}) {
-      // Persist the OAuth access_token and or the user id to the token right after signin
-      if (user) {
-        let returneduser: any = user;
-        console.log('jwt sees this user: ', returneduser.playername)
-        token.id = returneduser.id;
-        token.stripeid = returneduser.stripeid;
-        token.credits = returneduser.credits;
+    
+    async jwt({ user, token, trigger, session }) {
+      // On initial sign in, fetch full player data
+      if (user?.email) {
+        try {
+          const response = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/player?email=${encodeURIComponent(user.email)}`
+          )
+          
+          if (response.ok) {
+            const playerData = await response.json()
+            token.id = playerData.email
+            token.playername = playerData.playername
+            token.stripeid = playerData.stripeid
+            token.credits = playerData.credits
+            token.emailValidated = playerData.emailValidated
+            token.email = playerData.email
+          }
+        } catch (error) {
+          console.error('Error fetching player data in jwt callback:', error)
+        }
       }
-      if (trigger === "update" && session?.credits) {
-        // Note, that `session` can be any arbitrary object, remember to validate it!
+      
+      // Handle credit updates from Stripe
+      if (trigger === "update" && session?.credits !== undefined) {
         token.credits = session.credits
       }
+      
       return token
     },
-    async session({session, token }:any) {
-      // Send properties to the client, like an access_token and user id from a provider.
-      session.id= token.id
-      session.stripeid = token.stripeid;
-      session.isAuthenticated = true;
-      session.credits = token.credits;
-     // console.log('session is:', session)
+    
+    async session({ session, token }: any) {
+      // Map token data to session
+      session.id = token.id || token.email
+      session.playername = token.playername
+      session.stripeid = token.stripeid
+      session.isAuthenticated = true
+      session.credits = token.credits
+      session.emailValidated = token.emailValidated
+      session.email = token.email
+      
       return session
     }
   }
-  
-  
 }
 
 export default NextAuth(authOptions)
