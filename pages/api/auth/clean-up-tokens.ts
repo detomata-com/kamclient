@@ -9,8 +9,8 @@ const db = getFirestore()
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const now = Date.now()
-    const expiredTokens = await db.collection('verificationTokens')
-      .where('expires', '<', now)
+    const expiredTokens = await db.collection('magicTokens')
+      .where('expiresAt', '<', now)
       .get()
     
     const batch = db.batch()
