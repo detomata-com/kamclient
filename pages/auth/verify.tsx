@@ -20,11 +20,11 @@ export default function VerifyMagicLink() {
       const result = await signIn('magic-link', {
         token,
         redirect: false,
-        callbackUrl: '/store'
+        callbackUrl: '/Apothecary'
       })
 
       if (result?.ok) {
-        router.push('/store')
+        router.push('/Apothecary')
       } else {
         setError('Invalid or expired link. Please request a new one.')
       }
