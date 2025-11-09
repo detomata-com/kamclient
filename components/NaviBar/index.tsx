@@ -51,7 +51,7 @@ export default function KamNavBar(props: Props) {
           <Link className="font-medium text-blue-500 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="" aria-current="page">Home</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Privacy">Privacy</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Lobby">Lobby</Link>
-          {/* <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> */}
+           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> 
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="https://www.kamiozablog.com/">Blog</Link>
           <PlayerAuth></PlayerAuth>
         </div>
@@ -66,7 +66,7 @@ export default function KamNavBar(props: Props) {
           <Link className="font-medium text-gray-400 hover:text-gray-200 " href="/">Home</Link>
           <Link className="font-medium text-blue-500 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600" href="" aria-current="page">Privacy</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Lobby">Lobby</Link>
-          {/* <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> */}
+          <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> 
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="https://www.kamiozablog.com/">Blog</Link>
           <PlayerAuth></PlayerAuth>
         </div>
@@ -81,7 +81,7 @@ export default function KamNavBar(props: Props) {
           <Link className="font-medium text-gray-400 hover:text-gray-200 " href="/">Home</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Privacy">Privacy</Link>
           <Link className="font-medium text-blue-500" href="" aria-current="page">Lobby</Link>
-          {/* <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> */}
+          <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> 
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="https://www.kamiozablog.com/">Blog</Link>
           <PlayerAuth></PlayerAuth>
         </div>
@@ -96,7 +96,7 @@ export default function KamNavBar(props: Props) {
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="/">Home</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Privacy">Privacy</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Lobby">Lobby</Link>
-          {/* <Link className="font-medium text-blue-500 " href="" aria-current="page">Market</Link> */}
+          <Link className="font-medium text-blue-500 " href="" aria-current="page">Market</Link> 
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="https://www.kamiozablog.com/">Blog</Link>
           <PlayerAuth></PlayerAuth>
         </div>
@@ -110,7 +110,7 @@ export default function KamNavBar(props: Props) {
               </Button>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Privacy">Privacy</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="Lobby">Lobby</Link>
-          {/* <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link> */}
+          <Link className="font-medium text-gray-400 hover:text-gray-200" href="Apothecary">Market</Link>
           <Link className="font-medium text-gray-400 hover:text-gray-200" href="https://www.kamiozablog.com/">Blog</Link>
           <PlayerAuth></PlayerAuth>
         </div>
