@@ -40,10 +40,7 @@ export default function PlayerInfoPanel() {
     return (
         <>
              <Box p='2'>
-             <HStack><Heading size='sm'>Player Name: </Heading><Heading size='sm'>{myplayer.playername}</Heading></HStack>   
-             <HStack> <Heading size='sm'>IP Address: </Heading><Text size='lg'>{myplayer.playerip}</Text></HStack>  
-             <HStack> <Heading size='sm'>Public Key: </Heading><Text size='lg'>{myplayer.id}</Text></HStack>    
-             {/* <HStack><Heading size='sm'>Coin Balance: </Heading><Heading size='sm'>{session.credits}</Heading></HStack>    */}
+             <HStack> <Heading size='sm'>Player Email: </Heading><Text size='lg'>{myplayer.id}</Text></HStack>    
              <HStack><Heading size='sm'>Coin Balance: </Heading><Heading size='sm'>{myplayer.credits}</Heading></HStack> 
            </Box>
            <Divider orientation='horizontal' />

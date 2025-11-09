@@ -135,22 +135,14 @@ export default function PlayerAuthChoice() {
                       </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
-                Open the game and create a registration!
+                Registering only requires your email.
                 <Box
                           rounded={'lg'}
                           bg={useColorModeValue('white', 'gray.700')}
                           boxShadow={'lg'}
                           p={8}>
                           <Stack spacing={4}>
-                            <HStack>
-                              <Box>
-                                <FormControl id="firstName" isRequired>
-                                  <FormLabel>Player Name</FormLabel>
-                                  <Input type="text" onChange={handleplayerNameChange}/>
-                                </FormControl>
-                              </Box>
-        
-                            </HStack>
+                            
                             <FormControl id="email" isRequired>
                               <FormLabel>Email address</FormLabel>
                               <Input type="email" onChange={handleEmailChange} />
