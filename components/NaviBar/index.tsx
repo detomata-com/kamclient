@@ -2,7 +2,6 @@
 import * as React from 'react'
 import Link from 'next/link'
 import {
-  Text,
   Drawer,
   DrawerBody,
   DrawerFooter,
@@ -11,15 +10,8 @@ import {
   DrawerContent,
   DrawerCloseButton,
   Box,
-  Container,
-  Wrap,
-  WrapItem,
-  Center,
   VStack,
-  Avatar,
-  Input,
   Button,
-  Heading,
   useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react'

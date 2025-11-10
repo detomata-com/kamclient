@@ -63,9 +63,11 @@ export default async function handler(
   //   });
   // }
 
+  
+
   try {
     // Generate 4-digit code
-    const pairingCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const pairingCode = await generateUniquePairingCode();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
     const playerId = myRequest.playerId || '';
@@ -73,7 +75,7 @@ export default async function handler(
     const publicKey = myRequest.publicKey || '';
     const deviceInfo = myRequest.deviceInfo || {};
     // Store pending pairing in Firestore
-    await db.collection('devicePairings').doc(playerId).set({
+    await db.collection('devicePairings').doc(pairingCode).set({
       pairingCode,
       publicKey,
       playerId,
@@ -100,4 +102,18 @@ export default async function handler(
       message: 'Internal server error' 
     });
   }
+  async function generateUniquePairingCode(): Promise<string> {
+    const maxAttempts = 5;
+    for (let i = 0; i < maxAttempts; i++) {
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      // Check if code already exists
+      const existing = await db.collection('devicePairings').doc(code).get();
+      if (!existing.exists) {
+        return code; // Found unique code
+      } 
+      console.log(`Collision detected for code ${code}, retrying...`);
+    }
+    throw new Error('Failed to generate unique pairing code');
+  }
+
 }

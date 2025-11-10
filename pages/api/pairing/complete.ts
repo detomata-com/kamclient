@@ -66,6 +66,9 @@ export default async function handler(
       });
     }
 
+     const publicKey = pairingData.deviceInfo?.publicKey || pairingData.publicKey;
+ 
+
     // Check if expired
     if (new Date() > pairingData.expiresAt.toDate()) {
       await pairingRef.delete(); // Clean up expired
