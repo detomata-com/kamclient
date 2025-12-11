@@ -144,9 +144,7 @@ export default async function handler(
     const updatedDevices = [...currentDevices, newDevice];
     await playerRef.update({ trustedDevices: updatedDevices });
 
-    // Clean up pairing document
-    await pairingRef.delete();
-
+    
     return res.status(200).json({
       success: true,
       message: 'Device paired successfully',

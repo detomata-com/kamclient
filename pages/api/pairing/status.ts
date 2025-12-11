@@ -36,7 +36,8 @@ export default async function handler(
   }
 
   try {
-    const pairingDoc = await db.collection('devicePairings').doc(pairingCode).get();
+    const pairingRef = db.collection('devicePairings').doc(pairingCode);
+    const pairingDoc = await pairingRef.get();
 
     if (!pairingDoc.exists) {
       return res.status(200).json({ 
@@ -58,7 +59,7 @@ export default async function handler(
     // Check expiration
     if (new Date() > pairingData.expiresAt.toDate()) {
       // Clean up expired document
-      await db.collection('devicePairings').doc(pairingCode).delete();
+      await pairingRef.delete();
       return res.status(200).json({ 
         success: true, 
         complete: false, 
@@ -66,13 +67,24 @@ export default async function handler(
       });
     }
 
-    // Return current status
+    // If pairing is complete, delete the document after returning status
+    if (pairingData.completed) {
+      // Delete in background (don't await)
+      pairingRef.delete().catch(err => 
+        console.error('Error cleaning up completed pairing:', err)
+      );
+      
+      return res.status(200).json({ 
+        success: true,
+        complete: true,
+        message: 'Device successfully paired!' 
+      });
+    }
+
+    // Still waiting for user to complete pairing
     return res.status(200).json({ 
       success: true,
-      complete: pairingData.completed,
-      ...(pairingData.completed && { 
-        message: 'Device successfully paired!' 
-      })
+      complete: false
     });
 
   } catch (error) {
