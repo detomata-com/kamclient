@@ -111,7 +111,7 @@ export default async function handler(
 
     // Check if device is already paired
     const existingDevice = currentDevices.find((device: any) => 
-      device.address.toLowerCase() === pairingData.publicKey.toLowerCase()
+      device.address.toLowerCase() === (pairingData.deviceInfo?.publicKey || pairingData.publicKey).toLowerCase()
     );
 
     if (existingDevice) {
@@ -135,7 +135,7 @@ export default async function handler(
 
     // Add new device using your existing format
     const newDevice = {
-      address: pairingData.publicKey,
+      address: pairingData.deviceInfo?.publicKey || pairingData.publicKey,
       deviceName: deviceName || `Game Client ${new Date().toLocaleDateString()}`,
       pairedAt: Date.now(),
       lastSeen: Date.now()

@@ -17,10 +17,10 @@ customInitApp();
 const db = getFirestore();
 
 export interface PairingStartRequest {
-  publicKey: string;
   playerId: string;
   name?: string;
   deviceInfo?: {
+    publicKey: string;
     platform?: string;
     userAgent?: string;
     timestamp?: number;
@@ -72,8 +72,9 @@ export default async function handler(
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
     const playerId = myRequest.playerId || '';
     const name = myRequest.name || '';
-    const publicKey = myRequest.publicKey || '';
     const deviceInfo = myRequest.deviceInfo || {};
+    const publicKey = myRequest.deviceInfo?.publicKey || '';
+  
     // Store pending pairing in Firestore
     await db.collection('devicePairings').doc(pairingCode).set({
       pairingCode,
