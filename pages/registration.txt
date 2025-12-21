@@ -1,0 +1,11 @@
+1. `/api/device/register-via-email` - Game client calls this
+2. `/api/device/verify-registration` - Processes the email link click
+3. Page: `/auth/verify-registration` - Landing page for email link
+4. Page: `/registration-complete` - Success page
+
+**Flow:**
+```
+Game → POST /api/device/register-via-email → Email sent
+Player → Clicks email link → /auth/verify-registration
+Backend → Verifies token → Creates/updates player → Adds device
+User → Sees success → Redirected to /registration-complete
