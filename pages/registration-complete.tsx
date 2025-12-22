@@ -21,8 +21,8 @@ export default function RegistrationComplete() {
           borderWidth="1px" 
           borderColor="blue.200"
         >
-          <Heading size="md" mb={3}>Discover Game Add-ons</Heading>
-          <Text mb={4}>
+          <Heading size="md" mb={3} color="gray.800">Discover Game Add-ons</Heading>
+          <Text mb={4} color="gray.700">
             Find spells, items, and exclusive content in the Kamioza web store.
           </Text>
           <Text fontSize="sm" color="gray.600">
