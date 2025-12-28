@@ -22,6 +22,8 @@ import {
     FormControl,
     FormLabel,
     Spacer,
+    Alert, 
+    AlertIcon
 
   } from '@chakra-ui/react'
 
@@ -50,7 +52,14 @@ export default function PlayerAuthChoice() {
    // let prefix = 'localhost:3000'
 
    // const [returnpath, setreturnpath] = React.useState(prefix + pathname);
-
+function setMessage(msg) {
+      return (
+            <Alert status='info'>
+              <AlertIcon />
+                  {msg}
+            </Alert>
+          )
+  }
 
 
   const handleRegister = async () => {
@@ -70,6 +79,7 @@ export default function PlayerAuthChoice() {
     }
   } catch (error) {
     console.error('Registration error:', error);
+     setMessage('Problem registering. Please try again.');
   }
 };
 
