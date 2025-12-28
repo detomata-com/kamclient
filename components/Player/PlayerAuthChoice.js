@@ -49,46 +49,49 @@ export default function PlayerAuthChoice() {
   
     const handleplayerNameChange = (event) => setplayername(event.target.value)
     const handleEmailChange = (event) => setemail(event.target.value)
+    const [message, setMessage] = React.useState('');
 
  
-function setMessage(msg) {
-   if (msg){
-    return (
-            <Alert status='info'>
-              <AlertIcon />
-                  {msg}
-            </Alert>
-          )
-   } else {
-    return (<></>);
-   }
+function SetMessage({msg}) {
+  console.log('setMessage called with:', msg);
   
+  if (msg) {  // Remove curly braces here
+    return (
+      <Alert status='info'>
+        <AlertIcon />
+        {msg}
+      </Alert>
+    )
   }
+  
+  return null;  // Cleaner than <></>
+}
+
 
 
   const handleRegister = async () => {
-   
+    
     setMessage('Sending registration email...'); // Show loading state
   
-  try {
-    const response = await fetch('/api/auth/magic-link/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
+      try {
+        const response = await fetch('/api/auth/magic-link/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
 
-    const data = await response.json();
-    console.log('Registration response:', data);
-    
-    if (response.ok && data.success) {
-      setMessage('Check your email for registration link!');
-    } else {
-      setMessage(data.error || 'Problem registering. Please try again.');
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-    setMessage('Problem registering. Please try again.');
-  } 
+        const data = await response.json();
+        console.log('Registration response:', data);
+        
+        if (response.ok && data.success) {
+          setMessage('Check your email for registration link!');
+        } else {
+          setMessage(data.error || 'Problem registering. Please try again.');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        setMessage('Problem registering. Please try again.');
+      } 
 };
 
 
@@ -111,10 +114,11 @@ function setMessage(msg) {
                     spacing={4}
                     align='stretch'
                 >
-                  <setMessage></setMessage>
+                  
                   <Accordion allowToggle>
                   <AccordionItem>
                     <h2>
+                      
                       <AccordionButton>
                         <Box as='span' flex='1' textAlign='left'>
                           Register
@@ -123,7 +127,8 @@ function setMessage(msg) {
                       </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
-                Registering only requires your email.
+                    <SetMessage msg={message} />
+                
                 <Box
                           rounded={'lg'}
                           bg={useColorModeValue('white', 'gray.700')}
