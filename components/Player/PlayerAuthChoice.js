@@ -52,12 +52,17 @@ export default function PlayerAuthChoice() {
 
  
 function setMessage(msg) {
-      return (
+   if (msg){
+    return (
             <Alert status='info'>
               <AlertIcon />
                   {msg}
             </Alert>
           )
+   } else {
+    return (<></>);
+   }
+  
   }
 
 
@@ -106,6 +111,7 @@ function setMessage(msg) {
                     spacing={4}
                     align='stretch'
                 >
+                  <setMessage></setMessage>
                   <Accordion allowToggle>
                   <AccordionItem>
                     <h2>
