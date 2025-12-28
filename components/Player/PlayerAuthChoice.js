@@ -33,7 +33,7 @@ import {
   //import { EmailIcon } from '@chakra-ui/icons';
   import { v4 as uuidv4 } from 'uuid';
   import { usePathname } from 'next/navigation'
-  const [isLoading, setIsLoading] = useState(false);
+
 
  
 
@@ -50,9 +50,7 @@ export default function PlayerAuthChoice() {
     const handleplayerNameChange = (event) => setplayername(event.target.value)
     const handleEmailChange = (event) => setemail(event.target.value)
 
-   // let prefix = 'localhost:3000'
-
-   // const [returnpath, setreturnpath] = React.useState(prefix + pathname);
+ 
 function setMessage(msg) {
       return (
             <Alert status='info'>
@@ -64,7 +62,7 @@ function setMessage(msg) {
 
 
   const handleRegister = async () => {
-    setIsLoading(true);
+   
     setMessage('Sending registration email...'); // Show loading state
   
   try {
@@ -85,9 +83,7 @@ function setMessage(msg) {
   } catch (error) {
     console.error('Registration error:', error);
     setMessage('Problem registering. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
+  } 
 };
 
 
