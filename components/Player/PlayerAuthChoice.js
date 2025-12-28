@@ -33,6 +33,7 @@ import {
   //import { EmailIcon } from '@chakra-ui/icons';
   import { v4 as uuidv4 } from 'uuid';
   import { usePathname } from 'next/navigation'
+  const [isLoading, setIsLoading] = useState(false);
 
  
 
@@ -63,25 +64,29 @@ function setMessage(msg) {
 
 
   const handleRegister = async () => {
+    setIsLoading(true);
+    setMessage('Sending registration email...'); // Show loading state
+  
   try {
-    // Send magic link (same as login)
     const response = await fetch('/api/auth/magic-link/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-     console.log('Registration response:', response);
-     setMessage('Check your email for registration link!');
 
-    // const data = await response.json();
-    // console.log('Registration response:', data);
-    // if (data.success) {
-    //   // Show "check your email" message
-     
-    // }
+    const data = await response.json();
+    console.log('Registration response:', data);
+    
+    if (response.ok && data.success) {
+      setMessage('Check your email for registration link!');
+    } else {
+      setMessage(data.error || 'Problem registering. Please try again.');
+    }
   } catch (error) {
     console.error('Registration error:', error);
-     setMessage('Problem registering. Please try again.');
+    setMessage('Problem registering. Please try again.');
+  } finally {
+    setIsLoading(false);
   }
 };
 
