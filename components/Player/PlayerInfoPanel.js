@@ -40,7 +40,7 @@ export default function PlayerInfoPanel() {
     return (
         <>
              <Box p='2'>
-             <HStack> <Heading size='sm'>Player Email: </Heading><Text size='lg'>{myplayer.id}</Text></HStack>    
+             <HStack> <Heading size='sm'>Player Email: </Heading><Text size='lg'>{myplayer.email}</Text></HStack>    
              <HStack><Heading size='sm'>Coin Balance: </Heading><Heading size='sm'>{myplayer.credits}</Heading></HStack> 
            </Box>
            <Divider orientation='horizontal' />

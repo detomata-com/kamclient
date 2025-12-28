@@ -72,7 +72,7 @@ function setMessage(msg) {
     });
 
     const data = await response.json();
-    
+    console.log('Registration response:', data);
     if (data.success) {
       // Show "check your email" message
       setMessage('Check your email for registration link!');
