@@ -41,64 +41,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mark as used
     await docRef.update({ used: true })
 
-    const email = data!.email
-
-    // Check if player exists
-    const playerResponse = await fetch(
-      `${process.env.NEXTAUTH_URL}/api/player?email=${encodeURIComponent(email)}`
-    )
-
-    let playerData
-    if (playerResponse.ok) {
-      playerData = await playerResponse.json()
-      
-      // Update emailValidated
-      await fetch(`${process.env.NEXTAUTH_URL}/api/player`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...playerData,
-          emailValidated: true
-        })
-      })
-    } else {
-      // Create new player
-      const newPlayer = {
-        email: email,
-        playername: email.split('@')[0] || 'Player',
-        emailValidated: true,
-        credits: 0,
-        stripeid: null,
-        trustedDevices: []
+    //const email = data!.email
+    const email = data!.email.toLowerCase();
+// Simple lookup using email as document ID
+const playerDoc = await db.collection('players').doc(email).get();
+      if (playerDoc.exists) {
+        const playerData = playerDoc.data()!;
+        
+        return res.status(200).json({
+          success: true,
+          user: {
+            accountId: playerData.accountId,  // Include accountId (if exists)
+            email: playerData.email,
+            playername: playerData.playername,
+            credits: playerData.credits || 0,
+            stripeid: playerData.stripeid,
+            emailValidated: true
+          }
+        });
       }
-      
-      const createResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/player`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPlayer)
-      })
-      
-      if (createResponse.ok) {
-        playerData = await createResponse.json()
-      } else {
-        playerData = newPlayer
-      }
-    }
-
-    // Return user data for session creation
-    res.status(200).json({
-      success: true,
-      user: {
-        email: email,
-        id: email,
-        playername: playerData.playername,
-        credits: playerData.credits || 0,
-        stripeid: playerData.stripeid,
-        emailValidated: true
-      }
-    })
   } catch (error) {
-    console.error('Error verifying token:', error)
-    res.status(500).json({ error: 'Failed to verify token' })
+    console.error('Error verifying magic link token:', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

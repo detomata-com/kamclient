@@ -2,6 +2,12 @@
 import NextAuth from "next-auth"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { customInitApp } from "@/lib/firebase-admin-config";
+import { getFirestore, Timestamp, FieldValue, Filter  } from 'firebase-admin/firestore';
+
+customInitApp();
+const db = getFirestore();
+
 
 export interface returneduser {
   credits: number | null,
@@ -87,33 +93,42 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ user, token, trigger, session }) {
-      if (user) {
-        token.id = user.id
-        token.playername = (user as any).playername
-        token.stripeid = (user as any).stripeid
-        token.credits = (user as any).credits
-        token.emailValidated = (user as any).emailValidated
-        token.email = user.email
+  async jwt({ user, token, trigger, session }) {
+    if (user?.email) {
+      // Simple lookup using email as document ID
+      const playerDoc = await db.collection('players')
+        .doc(user.email.toLowerCase())
+        .get();
+      
+      if (playerDoc.exists) {
+        const playerData = playerDoc.data()!;
+        token.accountId = playerData.accountId;  // Add accountId to JWT (if exists)
+        token.email = playerData.email;
+        token.playername = playerData.playername;
+        token.stripeid = playerData.stripeid;
+        token.credits = playerData.credits;
+        token.emailValidated = playerData.emailValidated;
       }
-
-      if (trigger === "update" && session?.credits !== undefined) {
-        token.credits = session.credits
-      }
-
-      return token
+    }
+    
+    if (trigger === "update" && session?.credits !== undefined) {
+      token.credits = session.credits;
+    }
+    
+    return token;
     },
 
-    async session({ session, token }: any) {
-      session.id = token.id
-      session.playername = token.playername
-      session.stripeid = token.stripeid
-      session.isAuthenticated = true
-      session.credits = token.credits
-      session.emailValidated = token.emailValidated
-      session.email = token.email
-
-      return session
+   async session({ session, token }: any) {
+    session.accountId = token.accountId;  // Add to session (if exists)
+    session.email = token.email;
+    session.playername = token.playername;
+    session.stripeid = token.stripeid;
+    session.isAuthenticated = true;
+    session.credits = token.credits;
+    session.emailValidated = token.emailValidated;
+    
+    return session;
+  
     }
   }
 }

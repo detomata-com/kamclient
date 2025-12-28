@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { customInitApp } from '@/lib/firebase-admin-config'
 import { getFirestore } from 'firebase-admin/firestore'
+import { generateUniqueAccountId } from '@/lib/generate-account-id';
 
 customInitApp()
 const db = getFirestore()
@@ -61,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const publicKey = tokenData.publicKey
     const deviceInfo = tokenData.deviceInfo
 
-    // Check if player exists
+    // Check if player exists (using email as document ID - simple approach)
     const playerRef = db.collection('players').doc(email)
     const playerDoc = await playerRef.get()
 
@@ -69,6 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Player exists - add device to trustedDevices
       const playerData = playerDoc.data()
       const currentDevices = playerData?.trustedDevices || []
+      const accountId = playerData?.accountId  // Get existing accountId
 
       // Check if device already paired
       const existingDevice = currentDevices.find((device: any) => 
@@ -84,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({
           success: true,
           message: 'Device was already registered - updated last seen',
+          accountId,  // Return accountId to game client
           isNewAccount: false
         })
       }
@@ -104,12 +107,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({
         success: true,
         message: 'Device registered successfully',
+        accountId,  // Return accountId to game client
         isNewAccount: false
       })
 
     } else {
       // New player - create account with device
+      // Generate unique accountId for Guy to use
+      const accountId = await generateUniqueAccountId(db)
+      
       const newPlayer = {
+        accountId,  // Add accountId field for game client
         email: email,
         playername: email.split('@')[0] || 'Player',
         emailValidated: true,
@@ -126,12 +134,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ip: ''
       }
 
+      // Still use email as document ID (simple approach)
       await playerRef.set(newPlayer)
       await tokenRef.delete()
 
       return res.status(200).json({
         success: true,
         message: 'Account created and device registered!',
+        accountId,  // Return accountId to game client
         isNewAccount: true
       })
     }

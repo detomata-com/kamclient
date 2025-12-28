@@ -32,38 +32,40 @@ export async function CapturePlayer(player: any){
     }
   }
 
-  export async function UpdatePlayer(player: any){
-    try {
-        const data = player //this stuff should already be in player
-        const res = await db.collection('players').doc(player.email).update(data); 
-        return res;
-      } catch (e) {
-        console.error("player Update error", e);
-        return;
-      }
-    }
-
-
-
-
-export async function GetPlayer(myemail: any){
- console.log('email passed to authenticate: ', myemail)
+ export async function UpdatePlayer(email: string, updates: any) {
   try {
-    const playersRef = db.collection('players').doc(myemail);;
-    const doc = await playersRef.get();
-
-    if (!doc.exists) {
-      console.log('No such Player!');
-    } else {
-      console.log('Document data:', doc.data());
-    }
-    return doc.data();
-
-    } catch (e) {
-      console.error("error getting player by email", e);
-      return;
-    }
+    // Simple update using email as document ID
+    const playerRef = db.collection('players').doc(email.toLowerCase());
+    await playerRef.update(updates);
+    
+    return { success: true };
+  } catch (e) {
+    console.error("Error updating player:", e);
+    throw e;
   }
+}
+
+
+
+
+export async function GetPlayer(email: string) {
+  try {
+    // Simple lookup using email as document ID
+    const playerDoc = await db.collection('players')
+      .doc(email.toLowerCase())
+      .get();
+    
+    if (!playerDoc.exists) {
+      console.log('No player found for email:', email);
+      return null;
+    }
+    
+    return playerDoc.data();
+  } catch (e) {
+    console.error("Error getting player by email:", e);
+    return null;
+  }
+}
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -99,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
              let myPlayer = req.body
              console.log('myPlayer update -->', myPlayer)
-             let result = await UpdatePlayer(myPlayer);
+             let result = await UpdatePlayer(myPlayer.email, myPlayer.updates);
              res.status(200).json({ 'result': result })
 
        } catch (e) {

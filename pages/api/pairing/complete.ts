@@ -32,7 +32,21 @@ export default async function handler(
   }
 
   // Verify user is authenticated
-  const session = await getServerSession(req, res, authOptions);
+ const session = await getServerSession(req, res, authOptions);
+const email = (session as any).email.toLowerCase();
+
+// Simple lookup using email as document ID
+const playerRef = db.collection('players').doc(email);
+const playerDoc = await playerRef.get();
+if (!playerDoc.exists) {
+  return res.status(404).json({ success: false, message: 'Player not found' });
+}
+
+const playerData = playerDoc.data();
+const accountId = playerData?.accountId;  // Get accountId if it exists
+
+
+
   if (!session) {
     return res.status(401).json({ success: false, message: 'Not authenticated' });
   }
