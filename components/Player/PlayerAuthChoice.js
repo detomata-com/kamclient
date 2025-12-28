@@ -70,13 +70,15 @@ function setMessage(msg) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
+     console.log('Registration response:', response);
+     setMessage('Check your email for registration link!');
 
-    const data = await response.json();
-    console.log('Registration response:', data);
-    if (data.success) {
-      // Show "check your email" message
-      setMessage('Check your email for registration link!');
-    }
+    // const data = await response.json();
+    // console.log('Registration response:', data);
+    // if (data.success) {
+    //   // Show "check your email" message
+     
+    // }
   } catch (error) {
     console.error('Registration error:', error);
      setMessage('Problem registering. Please try again.');
