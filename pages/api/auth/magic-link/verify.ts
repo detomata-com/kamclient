@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { customInitApp } from "@/lib/firebase-admin-config"
 import { getFirestore } from 'firebase-admin/firestore'
+import { generateUniqueAccountId } from '@/lib/generate-account-id'
 
 customInitApp()
 const db = getFirestore()
@@ -45,21 +46,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const email = data!.email.toLowerCase();
 // Simple lookup using email as document ID
 const playerDoc = await db.collection('players').doc(email).get();
-      if (playerDoc.exists) {
-        const playerData = playerDoc.data()!;
-        
-        return res.status(200).json({
-          success: true,
-          user: {
-            accountId: playerData.accountId,  // Include accountId (if exists)
-            email: playerData.email,
-            playername: playerData.playername,
-            credits: playerData.credits || 0,
-            stripeid: playerData.stripeid,
-            emailValidated: true
-          }
-        });
-      }
+  if (playerDoc.exists) {
+  const playerData = playerDoc.data()!;
+  
+  return res.status(200).json({
+    success: true,
+    user: {
+      accountId: playerData.accountId,
+      email: playerData.email,
+      playername: playerData.playername,
+      credits: playerData.credits || 0,
+      stripeid: playerData.stripeid,
+      emailValidated: true
+    }
+  });
+} else {
+  // Create new player on first login
+  const accountId = await generateUniqueAccountId(db);
+  const playerRef = db.collection('players').doc(email);
+  
+  await playerRef.set({
+    accountId,
+    email,
+    playername: email.split('@')[0],
+    emailValidated: true,
+    credits: 0,
+    stripeid: '',
+    trustedDevices: []  // Add this - needed for device registration later
+  });
+  
+  // Return the new player data
+  return res.status(200).json({
+    success: true,
+    user: {
+      accountId,
+      email,
+      playername: email.split('@')[0],
+      credits: 0,
+      stripeid: '',
+      emailValidated: true
+    }
+  });
+}
   } catch (error) {
     console.error('Error verifying magic link token:', error)
     return res.status(500).json({ error: 'Internal server error' })

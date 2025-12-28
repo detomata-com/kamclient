@@ -53,56 +53,25 @@ export default function PlayerAuthChoice() {
 
 
 
-    const handleRegister = async () => {
-     // console.log('Registering Player');
-      let myplayer = {
-        playername: playername,
-        email: email,
-        emailValidated: false,
-        credits: 0,
-        stripeid: '',
-        id: uuidv4(),
-        trustedDevices: [{
-          deviceName: 'website',
-          pairedAt: new Date()
-        }]
-      }
+  const handleRegister = async () => {
+  try {
+    // Send magic link (same as login)
+    const response = await fetch('/api/auth/magic-link/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
 
-          try {
-            const response = await fetch(process.env.NEXT_PUBLIC_URL +'/api/player/', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(myplayer),
-              });
-             // console.log(response);
-              if (response.status == 200){
-               // console.log('success');
-                //Take away  registration option here
-                // Add player to redux
-                dispatch(SET_PLAYER({
-                  playername: myplayer.playername,
-                  email: myplayer.email,
-                  id: myplayer.id, 
-                  playerip: '',
-                  verToken: 'ver100001000',
-                  isAuthenticated: true,  // Todo - validate email and then can login
-                  emailValidated: false,
-                  credits: 0,
-                  stripeid: '',
-                  trustedDevices: myplayer.trustedDevices
-                }));
-
-
-
-              } 
-             
-        } catch (error) {
-            console.log('error happened creating player!....',error)
-            
-        }
-    };
+    const data = await response.json();
+    
+    if (data.success) {
+      // Show "check your email" message
+      setMessage('Check your email for registration link!');
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+  }
+};
 
 
     const handleLogin = async () => {
