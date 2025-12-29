@@ -1,0 +1,10 @@
+
+In order:
+
+register-via-email is the endpoint called to request registration by the game client
+
+verify-registration is called by the magiclink click of the link sent in email to actually register
+devices 
+
+check-registration is the endpoint that the game client calls to see if the person has clicked
+an active magic link and is registered now.

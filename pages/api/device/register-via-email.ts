@@ -23,7 +23,8 @@ export interface DeviceRegistrationResponse {
   success: boolean
   message: string
   emailSent?: boolean
-  error?: string
+  error?: string,
+  checkToken?: string
 }
 
 export default async function handler(
@@ -101,7 +102,8 @@ export default async function handler(
     return res.status(200).json({
       success: true,
       message: 'Check your email to complete device registration',
-      emailSent: true
+      emailSent: true,
+      checkToken: token
     })
 
   } catch (error) {
