@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if expired
     if (tokenData && tokenData.expiresAt < Date.now()) {
-      await tokenRef.delete()
+      //await tokenRef.delete()
       return res.status(400).json({ 
         success: false, 
         message: 'Registration link expired' 
@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Update last seen
         existingDevice.lastSeen = Date.now()
         await playerRef.update({ trustedDevices: currentDevices })
-        await tokenRef.delete()
+       // await tokenRef.delete()
         
         return res.status(200).json({
           success: true,
@@ -102,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       currentDevices.push(newDevice)
       await playerRef.update({ trustedDevices: currentDevices })
-      await tokenRef.delete()
+     // await tokenRef.delete()
 
       return res.status(200).json({
         success: true,
@@ -136,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Still use email as document ID (simple approach)
       await playerRef.set(newPlayer)
-      await tokenRef.delete()
+     //await tokenRef.delete()
 
       return res.status(200).json({
         success: true,

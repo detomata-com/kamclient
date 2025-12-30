@@ -59,7 +59,7 @@ export default async function handler(
   try {
     // Generate secure token
     const token = crypto.randomBytes(32).toString('hex')
-    const expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    const expiresAt = Date.now() + 120 * 60 * 1000 // 120 minutes
 
     // Store registration intent in Firebase
     await db.collection('registrationTokens').doc(token).set({
