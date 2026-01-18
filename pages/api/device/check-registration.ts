@@ -24,7 +24,7 @@ export default async function handler(
     })
   }
 
-  const { token, email } = req.query
+  const { token } = req.query
 
   if (!token || typeof token !== 'string') {
     return res.status(400).json({ 
@@ -33,48 +33,15 @@ export default async function handler(
     })
   }
 
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ 
-      verified: false,
-      message: 'Email required' 
-    })
-  }
-
   try {
-    // FIRST: Check if registration already completed
-    const emailLower = email.toLowerCase()
-    const playersByEmailDoc = await db.collection('players').doc(emailLower).get()
-
-    if (playersByEmailDoc.exists) {
-      const playersByEmailData = playersByEmailDoc.data()!
-      const accountId = playersByEmailData.accountId
-
-      // Registration is complete! Get full player data
-      const playerDoc = await db.collection('players').doc(accountId).get()
-      
-      if (playerDoc.exists) {
-        const playerData = playerDoc.data()!
-        
-        // Clean up token if it still exists
-        await db.collection('registrationTokens').doc(token).delete().catch(() => {})
-
-        return res.status(200).json({
-          verified: true,
-          message: 'Registration complete!',
-          accountId: playerData.accountId,
-          email: playerData.email
-        })
-      }
-    }
-
-    // SECOND: Check token status (registration still pending)
+    // Look up the registration token
     const tokenRef = db.collection('registrationTokens').doc(token)
     const tokenDoc = await tokenRef.get()
 
     if (!tokenDoc.exists) {
       return res.status(200).json({ 
         verified: false,
-        message: 'No registration found for this email' 
+        message: 'Token expired or invalid' 
       })
     }
 
@@ -87,28 +54,47 @@ export default async function handler(
       })
     }
 
-    // Verify email matches
-    if (tokenData.email.toLowerCase() !== emailLower) {
-      return res.status(400).json({
-        verified: false,
-        message: 'Email does not match token'
-      })
-    }
 
     // Check if expired
     if (tokenData.expiresAt < Date.now()) {
       await tokenRef.delete()
       return res.status(200).json({ 
         verified: false,
-        message: 'Registration token expired' 
+        message: 'Token expired' 
       })
     }
 
-    // Still waiting for email verification
-    return res.status(200).json({
-      verified: false,
-      message: 'Waiting for email verification'
-    })
+    // Check if used (email link was clicked)
+    if (tokenData.used) {
+      // Email verified! Look up player by email to get accountId
+      const email = tokenData.email.toLowerCase()
+      const playerDoc = await db.collection('players').doc(email).get()
+
+      if (!playerDoc.exists) {
+        return res.status(200).json({ 
+          verified: false,
+          message: 'player not found' 
+        })
+      }
+
+      const playerData = playerDoc.data()!
+
+      // Clean up the used token
+      await tokenRef.delete()
+
+      return res.status(200).json({
+        verified: true,
+        message: 'Registration complete!',
+        accountId: playerData.accountId,
+        email: playerData.email
+      })
+    } else {
+      // Still waiting for email verification
+      return res.status(200).json({
+        verified: false,
+        message: 'Waiting for email verification'
+      })
+    }
 
   } catch (error) {
     console.error('Error checking registration status:', error)
