@@ -43,7 +43,7 @@ export default async function handler(
   try {
     // FIRST: Check if registration already completed
     const emailLower = email.toLowerCase()
-    const playersByEmailDoc = await db.collection('playersByEmail').doc(emailLower).get()
+    const playersByEmailDoc = await db.collection('players').doc(emailLower).get()
 
     if (playersByEmailDoc.exists) {
       const playersByEmailData = playersByEmailDoc.data()!
