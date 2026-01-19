@@ -43,18 +43,16 @@ export default async function handler(
   try {
     // FIRST: Check if registration already completed
     const emailLower = email.toLowerCase()
-    const playersByEmailDoc = await db.collection('players').doc(emailLower).get()
+    const playersSnapshot = await db.collection('players')
+      .where('email', '==', emailLower)
+      .limit(1)
+      .get()
 
-    if (playersByEmailDoc.exists) {
-      const playersByEmailData = playersByEmailDoc.data()!
-      const accountId = playersByEmailData.accountId
-
-      // Registration is complete! Get full player data
-      const playerDoc = await db.collection('players').doc(accountId).get()
-      
-      if (playerDoc.exists) {
-        const playerData = playerDoc.data()!
+      if (!playersSnapshot.empty) {
+        const playerDoc = playersSnapshot.docs[0]
+        const playerData = playerDoc.data()
         
+        // Registration is complete!
         // Clean up token if it still exists
         await db.collection('registrationTokens').doc(token).delete().catch(() => {})
 
@@ -65,7 +63,7 @@ export default async function handler(
           email: playerData.email
         })
       }
-    }
+
 
     // SECOND: Check token status (registration still pending)
     const tokenRef = db.collection('registrationTokens').doc(token)
