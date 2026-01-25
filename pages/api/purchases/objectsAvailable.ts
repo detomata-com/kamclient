@@ -1,3 +1,4 @@
+// pages/api/purchases/objectsAvailable.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { customInitApp } from "@/lib/firebase-admin-config";
 import { getFirestore, Timestamp, FieldValue, Filter  } from 'firebase-admin/firestore';

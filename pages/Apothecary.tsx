@@ -23,32 +23,31 @@ import PurchaseButton from '@/components/Shop/PurchaseItem';
   const session = await getServerSession(context.req, context.res, authOptions)
   var localplayer:any;
 
-        if (!session) {
-          console.log('No sesseion');
-          return {
-            redirect: {
-              destination: "",
-              permanent: false,
-            },
-          }
-        }
-       // console.log('session is',session)
-        localplayer = session;
-        return {
-          props: {
-            user: localplayer.user,
-            userid: localplayer.id,
-            isAuthenticated: localplayer.isAuthenticated,
-            stripeid: localplayer.stripeid,
-            credits: localplayer.credits
-          },
-        }
+     if (!session) {
+  console.log('No session');
+  return {
+    props: {
+      user: null,
+      userid: null,
+      isAuthenticated: false,
+      stripeid: null,
+      credits: '0'
+    },
+  }
 }
 
+// Just stringify/parse to remove undefined
+return {
+  props: JSON.parse(JSON.stringify({
+    user: session.user || null,
+    userid: session.accountId || null,
+    isAuthenticated: !!session,
+    stripeid: session.stripeid || null,
+    credits: session.credits || '0'
+  })),
+}
 
-
-
-
+}
 
 export default function Apothecary({
   
@@ -245,5 +244,3 @@ export default function Apothecary({
  
   )
 }
-
-{/* <Text fontSize='xs'>When you buy Nystrom Coins you receive only a limited, non-refundable, non-transferable, revocable license to use Nystrom Coins, which have no value in real currency.</Text> */}

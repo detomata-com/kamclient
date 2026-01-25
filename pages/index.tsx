@@ -20,31 +20,30 @@ export async function getServerSideProps(context: any) {
   const session = await getServerSession(context.req, context.res, authOptions)
   var localplayer:any;
 
-        if (!session) {
-          console.log('No sesseion');
-          localplayer = {}
-          return {
-            props: {
-              user: '',
-              userid: '',
-              isAuthenticated: false,
-              stripeid: '',
-              credits:'0'
-            },
-          }
-        }
-       // console.log('session is',session)
-        localplayer = session;
-        return {
-          props: {
-            user: localplayer.user,
-            userid: localplayer.id,
-            isAuthenticated: localplayer.isAuthenticated,
-            stripeid: localplayer.stripeid,
-            credits:localplayer.credits
-           
-          },
-        }
+if (!session) {
+  console.log('No session');
+  return {
+    props: {
+      user: null,
+      userid: null,
+      isAuthenticated: false,
+      stripeid: null,
+      credits: '0'
+    },
+  }
+}
+
+// Just stringify/parse to remove undefined
+return {
+  props: JSON.parse(JSON.stringify({
+    user: session.user || null,
+    userid: session.accountId || null,
+    isAuthenticated: !!session,
+    stripeid: session.stripeid || null,
+    credits: session.credits || '0'
+  })),
+}
+
 }
 
 

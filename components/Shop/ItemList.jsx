@@ -8,7 +8,7 @@ export default async function ItemList (props) {
  
   var items;
   try {
-          const response = await fetch(process.env.NEXT_PUBLIC_URL +'/api/DigitalObjects/objectsAvailable');
+          const response = await fetch(process.env.NEXT_PUBLIC_URL +'/api/purchases/objectsAvailable');
            items = await response.json();
          if (response.status == 200){
           console.log('these items are available',items);

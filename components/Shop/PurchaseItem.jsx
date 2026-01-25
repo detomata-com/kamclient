@@ -1,4 +1,3 @@
-
 import {
   Button,
   AlertDialog,
@@ -7,112 +6,144 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
-  AlertDialogCloseButton,
   useDisclosure,
   Stack, 
   Text
 } from '@chakra-ui/react'
+import { signPurchase, getBrowserPublicKey } from '@/lib/crypto-client'
+import { SET_PLAYER } from '@/services/reducers/playerSlice'
+import { useDispatch, useSelector } from 'react-redux'
+import { useSession } from "next-auth/react"
+import React, { useState, useEffect } from 'react'
 
-
-import { SET_PLAYER } from '@/services/reducers/playerSlice';
-import { useDispatch, useSelector} from 'react-redux'
-import { useSession} from "next-auth/react"
-
-import React,{useState , useEffect} from 'react';
-
-
-export default function PurchaseButton(props){
-  const dispatch = useDispatch();
-  const player = useSelector((state) => state.player);
-  const [productState , setProductState] = useState(props)
+export default function PurchaseButton(props) {
+  const dispatch = useDispatch()
+  const player = useSelector((state) => state.player)
+  const [productState, setProductState] = useState(props)
 
   const { data: session, status, update } = useSession()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const cancelRef = React.useRef()
  
   useEffect(() => {
-    setProductState(props);
-    //need player.credits because the session value never changes
-    // I don't think credit should be in session
-    //console.log(player.credits);
+    setProductState(props)
+  }, [props])
 
-}, [props])
+  async function buy() {
+    console.log(props)
+    
+    if (!props.authenticated) {
+      alert('Please log in to make purchases')
+      return
+    }
 
+    const activeCredits = session.credits
 
+    // Check balance
+    if (activeCredits < props.price) {
+      alert('Insufficient credits. You need ' + props.price + ' but have ' + activeCredits)
+      return
+    }
 
-  
-//myuser, product, price, authenticated , mycredits
+    try {
+      // Generate purchase ID
+      const purchaseId = `purch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      // Prepare purchase data for signing
+      const purchaseData = {
+        accountId: session.accountId,
+        itemId: props.product,
+        cost: parseInt(props.price), // Ensure it's a number
+        timestamp: Date.now(),
+        purchaseId
+      }
+      
+      console.log('📝 Preparing purchase:', purchaseData)
+      
+      // Sign the purchase with browser's private key
+      const signature = await signPurchase(purchaseData)
+      const browserPublicKey = await getBrowserPublicKey()
+      
+      console.log('✍️ Purchase signed:', {
+        purchaseId,
+        signature: signature.substring(0, 20) + '...',
+        signedBy: browserPublicKey.substring(0, 20) + '...'
+      })
+      
+      // Create complete purchase record
+      const purchase = {
+        purchaseId,
+        itemId: props.product,
+        quantity: 1,
+        cost: parseInt(props.price),
+        purchasedAt: purchaseData.timestamp,
+        
+        // CRYPTO FIELDS
+        signature,
+        deviceAddress: browserPublicKey,
+        
+        // Claiming fields
+        claimed: false,
+        claimedByDevice: null,
+        claimedAt: null
+      }
+      
+      // Calculate new balance
+      const newBalance = activeCredits - parseInt(props.price)
+      
+      console.log('💾 Saving to database...')
+      
+      // Call API to save purchase and update balance
+      const response = await fetch('/api/purchases/objectsPurchased', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purchase,
+          newBalance
+        })
+      })
 
+      const result = await response.json()
 
-  async function buy(){
-   // console.log(props);
-    let activeCredits = session.credits
+      if (!result.success) {
+        throw new Error(result.error || 'Purchase failed')
+      }
 
-    if(props.authenticated){
-     
-      //check balance
-        if(activeCredits >= props.price){
-         
-          let newbalance = (activeCredits - props.price);
-          //store the product
-          //->Guy :)
-          //update the players credits
-          let player = {
-            email: props.myuser.email,
-            credits: newbalance
-          }
-          
-          try {
-          
-                  const response = await fetch(process.env.NEXT_PUBLIC_URL +'/api/player/', {
-                      method: 'PUT',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(player),
-                    });
-                    console.log('response from player update',response);
-                    
-                    if (response.status == 200){
-                      console.log('success');
-                      await update({ credits: newbalance })
-                            dispatch(SET_PLAYER({
-                              credits: newbalance,
-                            }));
-                          
-                            update();
-                           
-                           ///Add the item to the db for the player//////////////
-                            try {
-                              
-                            } catch (error) {
-                              
-                            }
-                           
-
-
-                           ////
-                            onClose();
-                    }    
-            } catch (error) {
-                console.log('error happened updating player info!....',error)
-            }
-        }else{
-          console.log('you do not have enough credits');
-        }
-    }else{
-      console.log('you are not logged in');
+      console.log('✅ Database updated successfully!')
+      
+      // Update Redux state
+      dispatch(SET_PLAYER({
+        ...player,
+        credits: newBalance,
+        pendingPurchases: [...(player.pendingPurchases || []), purchase]
+      }))
+      
+      // Update session credits
+      await update({
+        ...session,
+        credits: newBalance
+      })
+      
+      console.log('✅ Purchase complete and signed!')
+      
+      // Show success message
+      alert('Purchase successful! Item will be available in your game.')
+      
+      // Close dialog
+      onClose()
+      
+    } catch (error) {
+      console.error('❌ Purchase failed:', error)
+      alert('Purchase failed: ' + error.message)
     }
   }
    
-  
- 
-   return (
+  return (
     <>
-    <Button  onClick={onOpen}  variant='solid' colorScheme='blue'>
-                Purchase
-    </Button>
-    <AlertDialog
+      <Button onClick={onOpen} variant='solid' colorScheme='blue'>
+        Purchase
+      </Button>
+      <AlertDialog
         isOpen={isOpen}
         leastDestructiveRef={cancelRef}
         onClose={onClose}
@@ -125,17 +156,23 @@ export default function PurchaseButton(props){
 
             <AlertDialogBody>
               <Stack>
-              <Text> Item Purchase: {props.product}</Text>
-              <Text>Price: {props.price}</Text>
+                <Text>Item Purchase: {props.product}</Text>
+                <Text>Price: {props.price} credits</Text>
+                <Text>Your Balance: {session?.credits || 0} credits</Text>
+                <Text>Balance After: {(session?.credits || 0) - parseInt(props.price)} credits</Text>
               </Stack>
-              
             </AlertDialogBody>
 
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>
                 Cancel
               </Button>
-              <Button colorScheme='green' onClick={buy} ml={3}>
+              <Button 
+                colorScheme='green' 
+                onClick={buy} 
+                ml={3}
+                isDisabled={!props.authenticated || (session?.credits || 0) < parseInt(props.price)}
+              >
                 Buy
               </Button>
             </AlertDialogFooter>
@@ -143,8 +180,5 @@ export default function PurchaseButton(props){
         </AlertDialogOverlay>
       </AlertDialog>
     </>
-    
-   
-     )
-   }
-   
+  )
+}
