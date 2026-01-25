@@ -34,47 +34,77 @@ export async function GetPendingPurchases(email: string) {
     const playerDoc = await playerRef.get()
     
     if (!playerDoc.exists) {
+      console.log(`⚠️ Player not found: ${email}`)
       return []
     }
     
     const playerData = playerDoc.data()
     const pendingPurchases = playerData?.pendingPurchases || []
     
+    // Filter for unclaimed purchases only
     const unclaimedPurchases = pendingPurchases.filter((p: any) => !p.claimed)
     
-    const expandedPurchases = await Promise.all(
-      unclaimedPurchases.map(async (purchase: any) => {
-        try {
-          const itemPackRef = db.collection('item_content').doc(purchase.itemId)
-          const itemPackDoc = await itemPackRef.get()
-          
-          if (itemPackDoc.exists) {
-            const packData = itemPackDoc.data()
-            return {
-              ...purchase,
-              items: packData?.items || [],
-              packDescription: packData?.desc || '',
-              packImage: packData?.image || '',
-              packName: packData?.name || purchase.itemId
-            }
-          } else {
-            console.warn(`⚠️ Item pack not found in item_content: ${purchase.itemId}`)
-            return {
-              ...purchase,
-              items: [],
-              packDescription: 'Pack details not found',
-              packImage: '',
-              packName: purchase.itemId
-            }
-          }
-        } catch (error) {
-          console.error(`Error expanding purchase ${purchase.purchaseId}:`, error)
-          return purchase
-        }
-      })
-    )
+    if (unclaimedPurchases.length === 0) {
+      console.log(`📦 No unclaimed purchases for ${email}`)
+      return []
+    }
     
-    console.log(`📦 Returning ${expandedPurchases.length} unclaimed purchases for ${email}`)
+    console.log(`🔍 Looking up ${unclaimedPurchases.length} unclaimed purchases...`)
+    
+    // Fetch ALL item_content docs once (more efficient than individual lookups)
+    const itemContentSnapshot = await db.collection('item_content').get()
+    const itemContentMap = new Map()
+    
+    // Build case-insensitive lookup map
+    itemContentSnapshot.docs.forEach(doc => {
+      const data = doc.data()
+      const lowercaseName = data.name?.toLowerCase()
+      
+      if (lowercaseName) {
+        itemContentMap.set(lowercaseName, {
+          id: doc.id,
+          name: data.name,
+          desc: data.desc || '',
+          image: data.image || '',
+          items: data.items || []
+        })
+      }
+    })
+    
+    console.log(`📋 Loaded ${itemContentMap.size} item packs from item_content`)
+    
+    // Expand each purchase with pack details
+    const expandedPurchases = unclaimedPurchases.map((purchase: any) => {
+      const lowercaseItemId = purchase.itemId.toLowerCase()
+      const packData = itemContentMap.get(lowercaseItemId)
+      
+      if (packData) {
+        console.log(`   ✅ "${purchase.itemId}" → Found pack with ${packData.items.length} items`)
+        
+        return {
+          ...purchase,
+          items: packData.items,
+          packDescription: packData.desc,
+          packImage: packData.image,
+          packName: packData.name // Use the correct casing from database
+        }
+      } else {
+        console.warn(`   ❌ "${purchase.itemId}" → No matching pack found`)
+        console.warn(`      Available packs: ${Array.from(itemContentMap.keys()).join(', ')}`)
+        
+        return {
+          ...purchase,
+          items: [],
+          packDescription: 'Pack not found in catalog',
+          packImage: '',
+          packName: purchase.itemId
+        }
+      }
+    })
+    
+    const totalItems = expandedPurchases.reduce((sum: any, p: { items: string | any[] }) => sum + (p.items?.length || 0), 0)
+    console.log(`📦 Returning ${expandedPurchases.length} purchases with ${totalItems} total items for ${email}`)
+    
     return expandedPurchases
     
   } catch (e) {
@@ -82,7 +112,6 @@ export async function GetPendingPurchases(email: string) {
     throw e
   }
 }
-
 // Mark purchases as claimed
 export async function ClaimPurchases(email: string, purchaseIds: string[], deviceId: string) {
   try {
