@@ -159,23 +159,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
     }
     
-  } else if (req.method === 'GET') {
-    // Get pending purchases with expanded item details
-    try {
-      const purchases = await GetPendingPurchases(session.user.email)
+  }else if (req.method === 'GET') {
+  // Get pending purchases with expanded item details
+  try {
+    // Check if this is a game client request (has accountId param)
+    const accountId = req.query.accountId as string
+    
+    let email: string
+    
+    if (accountId) {
+      // Game client request - look up email from accountId
+      const playersSnapshot = await db.collection('players')
+        .where('accountId', '==', accountId)
+        .limit(1)
+        .get()
       
-      res.status(200).json({ 
-        success: true,
-        purchases,
-        count: purchases.length
-      })
+      if (playersSnapshot.empty) {
+        return res.status(404).json({ error: 'Player not found' })
+      }
       
-    } catch (e) {
-      console.error("Processing error getting purchases", e)
-      res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
+      const playerDoc = playersSnapshot.docs[0]
+      email = playerDoc.id // Document ID is the email
+      
+    } else {
+      // Web browser request - use session
+      const session = await getServerSession(req, res, authOptions)
+      
+      if (!session?.user?.email) {
+        return res.status(401).json({ error: 'Not authenticated' })
+      }
+      
+      email = session.user.email
     }
     
-  } else if (req.method === 'PUT') {
+    const purchases = await GetPendingPurchases(email)
+    
+    res.status(200).json({ 
+      success: true,
+      purchases,
+      count: purchases.length
+    })
+    
+  } catch (e) {
+    console.error("Processing error getting purchases", e)
+    res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
+  }
+} else if (req.method === 'PUT') {
     // Claim purchases (when game client adds to inventory)
     try {
       const { purchaseIds, deviceId } = req.body
