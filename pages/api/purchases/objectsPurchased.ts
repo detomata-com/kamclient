@@ -13,7 +13,6 @@ export async function CapturePurchase(email: string, purchase: any, newBalance: 
   try {
     const playerRef = db.collection('players').doc(email)
     
-    // Update player document atomically
     await playerRef.update({
       credits: newBalance,
       pendingPurchases: FieldValue.arrayUnion(purchase)
@@ -41,15 +40,11 @@ export async function GetPendingPurchases(email: string) {
     const playerData = playerDoc.data()
     const pendingPurchases = playerData?.pendingPurchases || []
     
-    // Filter for unclaimed purchases only
     const unclaimedPurchases = pendingPurchases.filter((p: any) => !p.claimed)
     
-    // Expand each purchase with item pack details from item_content
     const expandedPurchases = await Promise.all(
       unclaimedPurchases.map(async (purchase: any) => {
         try {
-          // Look up the item pack in item_content collection
-          // Using itemId as the document ID (e.g., "Bomb Pack")
           const itemPackRef = db.collection('item_content').doc(purchase.itemId)
           const itemPackDoc = await itemPackRef.get()
           
@@ -57,14 +52,12 @@ export async function GetPendingPurchases(email: string) {
             const packData = itemPackDoc.data()
             return {
               ...purchase,
-              // Add the items array from the pack
               items: packData?.items || [],
               packDescription: packData?.desc || '',
               packImage: packData?.image || '',
               packName: packData?.name || purchase.itemId
             }
           } else {
-            // Pack not found in item_content, return purchase as-is with warning
             console.warn(`⚠️ Item pack not found in item_content: ${purchase.itemId}`)
             return {
               ...purchase,
@@ -103,7 +96,6 @@ export async function ClaimPurchases(email: string, purchaseIds: string[], devic
     const playerData = playerDoc.data()
     const pendingPurchases = playerData?.pendingPurchases || []
     
-    // Update claimed purchases
     const updatedPurchases = pendingPurchases.map((p: any) => {
       if (purchaseIds.includes(p.purchaseId) && !p.claimed) {
         return {
@@ -131,15 +123,15 @@ export async function ClaimPurchases(email: string, purchaseIds: string[], devic
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Verify authentication
-  const session = await getServerSession(req, res, authOptions)
-  
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: 'Not authenticated' })
-  }
   
   if (req.method === 'POST') {
-    // Create new purchase
+    // Create new purchase - REQUIRES SESSION
+    const session = await getServerSession(req, res, authOptions)
+    
+    if (!session?.user?.email) {
+      return res.status(401).json({ error: 'Not authenticated' })
+    }
+    
     try {
       const { purchase, newBalance } = req.body
       
@@ -159,55 +151,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
     }
     
-  }else if (req.method === 'GET') {
-  // Get pending purchases with expanded item details
-  try {
-    // Check if this is a game client request (has accountId param)
-    const accountId = req.query.accountId as string
-    
-    let email: string
-    
-    if (accountId) {
-      // Game client request - look up email from accountId
-      const playersSnapshot = await db.collection('players')
-        .where('accountId', '==', accountId)
-        .limit(1)
-        .get()
+  } else if (req.method === 'GET') {
+    // Get pending purchases - SUPPORTS BOTH SESSION AND ACCOUNTID
+    try {
+      const accountId = req.query.accountId as string
+      let email: string
       
-      if (playersSnapshot.empty) {
-        return res.status(404).json({ error: 'Player not found' })
+      if (accountId) {
+        // Game client request - look up email from accountId
+        console.log(`🎮 Game client request for accountId: ${accountId}`)
+        
+        const playersSnapshot = await db.collection('players')
+          .where('accountId', '==', accountId)
+          .limit(1)
+          .get()
+        
+        if (playersSnapshot.empty) {
+          return res.status(404).json({ error: 'Player not found' })
+        }
+        
+        const playerDoc = playersSnapshot.docs[0]
+        email = playerDoc.id // Document ID is the email
+        console.log(`✅ Found player: ${email}`)
+        
+      } else {
+        // Web browser request - use session
+        const session = await getServerSession(req, res, authOptions)
+        
+        if (!session?.user?.email) {
+          return res.status(401).json({ error: 'Not authenticated' })
+        }
+        
+        email = session.user.email
+        console.log(`🌐 Web request for: ${email}`)
       }
       
-      const playerDoc = playersSnapshot.docs[0]
-      email = playerDoc.id // Document ID is the email
+      const purchases = await GetPendingPurchases(email)
       
-    } else {
-      // Web browser request - use session
-      const session = await getServerSession(req, res, authOptions)
+      res.status(200).json({ 
+        success: true,
+        purchases,
+        count: purchases.length
+      })
       
-      if (!session?.user?.email) {
-        return res.status(401).json({ error: 'Not authenticated' })
-      }
-      
-      email = session.user.email
+    } catch (e) {
+      console.error("Processing error getting purchases", e)
+      res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
     }
     
-    const purchases = await GetPendingPurchases(email)
-    
-    res.status(200).json({ 
-      success: true,
-      purchases,
-      count: purchases.length
-    })
-    
-  } catch (e) {
-    console.error("Processing error getting purchases", e)
-    res.status(500).json({ error: e instanceof Error ? e.message : 'Unknown error' })
-  }
-} else if (req.method === 'PUT') {
-    // Claim purchases (when game client adds to inventory)
+  } else if (req.method === 'PUT') {
+    // Claim purchases - SUPPORTS BOTH SESSION AND ACCOUNTID
     try {
-      const { purchaseIds, deviceId } = req.body
+      const { purchaseIds, deviceId, accountId } = req.body
+      let email: string
       
       if (!purchaseIds || !Array.isArray(purchaseIds)) {
         return res.status(400).json({ error: 'Missing purchaseIds array' })
@@ -217,7 +213,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing deviceId' })
       }
       
-      const result = await ClaimPurchases(session.user.email, purchaseIds, deviceId)
+      if (accountId) {
+        // Game client request
+        console.log(`🎮 Game client claim for accountId: ${accountId}`)
+        
+        const playersSnapshot = await db.collection('players')
+          .where('accountId', '==', accountId)
+          .limit(1)
+          .get()
+        
+        if (playersSnapshot.empty) {
+          return res.status(404).json({ error: 'Player not found' })
+        }
+        
+        const playerDoc = playersSnapshot.docs[0]
+        email = playerDoc.id
+        
+      } else {
+        // Web browser request
+        const session = await getServerSession(req, res, authOptions)
+        
+        if (!session?.user?.email) {
+          return res.status(401).json({ error: 'Not authenticated' })
+        }
+        
+        email = session.user.email
+      }
+      
+      const result = await ClaimPurchases(email, purchaseIds, deviceId)
       
       res.status(200).json({ 
         success: true,
